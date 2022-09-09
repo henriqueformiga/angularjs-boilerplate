@@ -1,24 +1,66 @@
-var gulp = require("gulp");
-var gutil = require("gulp-util");
-var concat = require("gulp-concat");
-var notify = require("gulp-notify");
-var uglify = require("gulp-uglify");
-var jshint = require("gulp-jshint");
-var sourcemaps = require("gulp-sourcemaps");
-var rename = require("gulp-rename");
+// import the base gulp node module
+const gulp = require('gulp');
+const concat = require('gulp-concat');
+const browserSync = require('browser-sync').create();
 
-gulp.task("scripts", function() {
-  return gulp
-    .src(["src/app/**/*.js"])
-    .pipe(sourcemaps.init())
-    .pipe(concat("bundle.js"))
-    .pipe(gutil.env.type === "production" ? uglify() : gutil.noop())
-    .pipe(sourcemaps.write())
-    .pipe(gulp.dest("dist/scripts/"))
-    .pipe(notify({ message: "JS files successfully concated and reduced" }));
+const scripts = require('./scripts.json');
+const styles = require('./styles.json');
+
+let devMode = false;
+
+gulp.task('css', function () {
+  gulp
+    .src(styles)
+    .pipe(concat('main.css'))
+    .pipe(gulp.dest('./dist/css'))
+    .pipe(
+      browserSync.reload({
+        stream: true,
+      })
+    );
 });
 
-gulp.task("watch", function() {
-  // Watch .js files
-  gulp.watch("src/**/*.js", gulp.series("scripts"));
+gulp.task('js', function () {
+  gulp
+    .src(scripts)
+    .pipe(concat('scripts.js'))
+    .pipe(gulp.dest('./dist/js'))
+    .pipe(
+      browserSync.reload({
+        stream: true,
+      })
+    );
+});
+
+gulp.task('html', function () {
+  return gulp
+    .src('./src/**/*.html')
+    .pipe(gulp.dest('./dist/'))
+    .pipe(
+      browserSync.reload({
+        stream: true,
+      })
+    );
+});
+
+gulp.task('build', function () {
+  gulp.parallel('css', 'js', 'html')();
+});
+
+gulp.task('browser-sync', function () {
+  browserSync.init({
+    open: false,
+    port: 3000,
+    server: {
+      baseDir: './dist',
+    },
+  });
+});
+
+gulp.task('dev', function () {
+  gulp.parallel('build', 'browser-sync')();
+  gulp.watch(['./src/assets/css/**/*.css'], gulp.series('css'));
+  gulp.watch('./src/app/**/*.js', gulp.series('js'));
+  gulp.watch(['./src/**/*.html'], gulp.series('html'));
+  return;
 });
